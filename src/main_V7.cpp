@@ -1,0 +1,57 @@
+﻿#include "graph_utils.h"
+#include "bellman_ford.h"
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+#include <iomanip>
+#include <limits>
+#include <vector>
+
+using namespace std;
+namespace fs = std::filesystem;
+
+void cleanup(Graph* g, GraphSoA* gSoA) {
+    if (g) { delete[] g->edge; delete g; }
+    if (gSoA) { delete gSoA; }
+}
+
+int main() {
+    string folder = "graph";
+    string txtFile = folder + "/graf.txt";
+
+    // --- INICIJALIZACIJA (SoA) ---
+    if (!fs::exists(folder)) { fs::create_directory(folder); }
+    if (!fs::exists(txtFile)) { 
+        createGraph(txtFile, 200000, 8000000, -15, 35); 
+    }
+
+    Graph* g = readGraph(txtFile); 
+    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; return 1; }
+    GraphSoA* gSoA = readGraphSoA(txtFile);
+    if (!gSoA) { cerr << "[ERROR] Ne mogu ucitati graf (SoA)!" << endl; cleanup(g, nullptr); return 1; }
+
+    cout << "[INFO] Testiram: V7 - SIMD Tiling (AVX-512) + OpenMP (ULTIMATIVNA)\n";
+    cout << "[INFO] Cvorovi: " << gSoA->num_nodes << ", Grane: " << gSoA->num_edges << endl;
+    cout << string(60, '=') << endl;
+    
+    int last_node = gSoA->num_nodes - 1;
+
+    // =================================================================
+    // ========== TEST: V7 - SIMD AVX-512 + OpenMP (ULTIMATIVNA) ==========
+    // =================================================================
+    auto start = chrono::high_resolution_clock::now();
+    vector<int> distances_i = runBellmanFordSSSP_SIMD_Tiling_AVX512_OMP(gSoA, 0); // <-- KLJUČNA LINIJA
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> elapsed = end - start;
+    
+    long result = (long)distances_i[last_node];
+    cout << "[VRIJEME] " << fixed << setprecision(3) << elapsed.count() << " sekundi\n";
+    if (result >= numeric_limits<int>::max() / 4)
+        cout << "[REZULTAT] Cvor " << last_node << " nije dostupan.\n";
+    else
+        cout << "[REZULTAT] Najkraci put (0 -> " << last_node << ") = " << result << endl;
+    
+    cleanup(g, gSoA);
+    return 0;
+}
