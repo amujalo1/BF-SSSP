@@ -184,36 +184,6 @@ int main() {
     
     print_results("SIMD_Tiling_AVX2_OMP", distances5, elapsed5.count(), elapsed1.count());
 
-    // =================================================================================
-    // ========== TEST 6: SIMD TILING AVX-512 (Single-threaded) ========================
-    // =================================================================================
-    cout << "\n[TEST 6] SIMD TILING (AVX-512 - SoA, int)\n";
-    cout << "  > Optimizacije: V4 + AVX-512 SIMD (16-way) sa AVX2/Skalarnim Fallbackom\n";
-    cout << string(80, '=') << endl;
-    
-    auto start6 = chrono::high_resolution_clock::now();
-    vector<int> distances6_i = runBellmanFordSSSP_SIMD_Tiling_AVX512(gSoA, 0);
-    auto end6 = chrono::high_resolution_clock::now();
-    chrono::duration<double> elapsed6 = end6 - start6;
-    vector<long> distances6 = to_long_vec(distances6_i);
-    
-    print_results("SIMD_Tiling_AVX512", distances6, elapsed6.count(), elapsed1.count());
-    
-    // =================================================================================
-    // ========== TEST 7: SIMD TILING AVX-512 + OpenMP (ULTIMATIVNA) ===================
-    // =================================================================================
-    cout << "\n[TEST 7] SIMD TILING + AVX-512 + OpenMP (ULTIMATIVNA - SoA, int)\n";
-    // *** Format za V7 je popravljen tako da odgovara ostalima ***
-    cout << "  > Kombinacija: V6 + OpenMP paralelizacija\n";
-    cout << string(80, '=') << endl;
-    
-    auto start7 = chrono::high_resolution_clock::now();
-    vector<int> distances7_i = runBellmanFordSSSP_SIMD_Tiling_AVX512_OMP(gSoA, 0);
-    auto end7 = chrono::high_resolution_clock::now();
-    chrono::duration<double> elapsed7 = end7 - start7;
-    vector<long> distances7 = to_long_vec(distances7_i);
-    
-    print_results("SIMD_Tiling_AVX512_OMP", distances7, elapsed7.count(), elapsed1.count());
 
 
     // ==================== FINALNI REZIME ====================
@@ -229,10 +199,7 @@ int main() {
     cout << "| V3      | OpenMP (Multi-threading)        | " << setw(11) << elapsed3.count() << " | " << setw(12) << setprecision(2) << (elapsed1.count()/elapsed3.count()) << " | " << (compare_distances(distances1, distances3) ? "V TACNO" : "X NETACNO") << " |\n";
     cout << "| V4      | SIMD Tiling (AVX2, 8-way)       | " << setw(11) << elapsed4.count() << " | " << setw(12) << setprecision(2) << (elapsed1.count()/elapsed4.count()) << " | " << (compare_distances(distances1, distances4) ? "V TACNO" : "X NETACNO") << " |\n";
     cout << "| V5      | V4 + OpenMP                     | " << setw(11) << elapsed5.count() << " | " << setw(12) << setprecision(2) << (elapsed1.count()/elapsed5.count()) << " | " << (compare_distances(distances1, distances5) ? "V TACNO" : "X NETACNO") << " |\n";
-    cout << "| V6      | SIMD Tiling (AVX-512, 16-way)   | " << setw(11) << elapsed6.count() << " | " << setw(12) << setprecision(2) << (elapsed1.count()/elapsed6.count()) << " | " << (compare_distances(distances1, distances6) ? "V TACNO" : "X NETACNO") << " |\n";
-    cout << "| V7      | V6 + OpenMP (ULTIMATIVNA)       | " << setw(11) << elapsed7.count() << " | " << setw(12) << setprecision(2) << (elapsed1.count()/elapsed7.count()) << " | " << (compare_distances(distances1, distances7) ? "V TACNO" : "X NETACNO") << " |\n";
-
-    cout << string(80, '#') << endl;
+    
     
     // Čišćenje memorije
     delete[] g->edge;
