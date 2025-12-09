@@ -6,7 +6,7 @@
 #include <random>
 #include <set>
 #include <algorithm>
-
+#include <sstream>
 using namespace std;
 
 /* =====================================================
@@ -23,82 +23,134 @@ bool createGraph(const string& filename,
                  int maxW)
 {
     if (numNodes < 2) {
-        cerr << "Broj čvorova mora biti >= 2!\n";
+        cerr << "[ERROR] Broj cvorova mora biti >= 2!\n";
         return false;
     }
-
+    
+    if (numEdges < 0) {
+        cerr << "[ERROR] Broj grana mora biti >= 0!\n";
+        return false;
+    }
+    
+    // Maksimalan broj grana u DAG-u je n*(n-1)/2
+    long long maxPossibleEdges = (long long)numNodes * (numNodes - 1) / 2;
+    if (numEdges > maxPossibleEdges) {
+        cerr << "[ERROR] Previse grana za DAG sa " << numNodes 
+             << " cvorova! Maksimalno: " << maxPossibleEdges << endl;
+        return false;
+    }
+    
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> nodeDist(0, numNodes - 1);
     uniform_int_distribution<> wDist(minW, maxW);
-
-    set<pair<int, int>> used;
+    
+    cout << "[INFO] Generisanje " << numEdges << " grana..." << endl;
+    
     vector<Edge> edges;
     edges.reserve(numEdges);
-
-    // Generišemo DAG tako što zahtijevamo u < v
-    while ((int)edges.size() < numEdges) {
-        int u = nodeDist(gen);
-        int v = nodeDist(gen);
-
-        if (u >= v) continue;           // DAG pravilo
-        if (used.count({u, v})) continue;
-
-        used.insert({u, v});
-        int w = wDist(gen);
-
-        edges.push_back({u, v, w});
+    
+    // Za velike grafove koristimo efikasniji pristup
+    if ((long long)numEdges > maxPossibleEdges / 2) {
+        // PRISTUP 1: Generiši sve moguće grane i random shuffle
+        cout << "[INFO] Koristim pristup sa generisanjem svih mogucih grana..." << endl;
+        
+        vector<pair<int,int>> allPairs;
+        allPairs.reserve(maxPossibleEdges);
+        
+        for (int u = 0; u < numNodes - 1; ++u) {
+            for (int v = u + 1; v < numNodes; ++v) {
+                allPairs.push_back({u, v});
+            }
+            if (u % 10000 == 0) {
+                cout << "  Generisanje parova: " << u << "/" << numNodes << "\r" << flush;
+            }
+        }
+        cout << "  Generisanje parova: " << numNodes << "/" << numNodes << " [GOTOVO]" << endl;
+        
+        // Shuffle i uzmi prvih numEdges
+        cout << "[INFO] Shuffle parova..." << flush;
+        shuffle(allPairs.begin(), allPairs.end(), gen);
+        cout << " Gotovo!" << endl;
+        
+        cout << "[INFO] Kreiranje grana sa tezinama..." << flush;
+        for (int i = 0; i < numEdges; ++i) {
+            int w = wDist(gen);
+            edges.push_back({allPairs[i].first, allPairs[i].second, w});
+            
+            if ((i + 1) % 10000000 == 0) {
+                cout << "\n  Kreirano: " << (i + 1) << "/" << numEdges << flush;
+            }
+        }
+        cout << " Gotovo!" << endl;
+        
+    } else {
+        // PRISTUP 2: Random sampling za manji broj grana
+        cout << "[INFO] Koristim pristup sa random samplingom..." << endl;
+        
+        set<pair<int, int>> used;
+        uniform_int_distribution<> nodeDist(0, numNodes - 1);
+        
+        int lastReport = 0;
+        while ((int)edges.size() < numEdges) {
+            int u = nodeDist(gen);
+            int v = nodeDist(gen);
+            
+            if (u >= v) continue; // DAG pravilo
+            if (used.count({u, v})) continue;
+            
+            used.insert({u, v});
+            int w = wDist(gen);
+            edges.push_back({u, v, w});
+            
+            // Progress report svakih 10%
+            int progress = (edges.size() * 100) / numEdges;
+            if (progress >= lastReport + 10) {
+                cout << "  Progress: " << progress << "% (" 
+                     << edges.size() << "/" << numEdges << ")" << endl;
+                lastReport = progress;
+            }
+        }
     }
-
-    // --- Snimi edge list (.txt)
-    ofstream out(filename);
+    
+    cout << "[INFO] Snimanje u fajl..." << flush;
+    
+    // Snimi edge list (.txt)
+    ofstream out(filename, ios::binary); // Binary za bržu IO
     if (!out.is_open()) {
-        cerr << "Ne mogu otvoriti fajl " << filename << " za pisanje!\n";
+        cerr << "\n[ERROR] Ne mogu otvoriti fajl " << filename << " za pisanje!\n";
         return false;
     }
-
-    out << numNodes << " " << numEdges << "\n";
-    for (auto& e : edges) {
-        out << e.source << " "
-            << e.destination << " "
-            << e.weight << "\n";
+    
+    out << numNodes << " " << edges.size() << "\n";
+    
+    // Buffer za brže pisanje
+    stringstream buffer;
+    int bufferSize = 0;
+    const int BUFFER_LIMIT = 100000;
+    
+    for (const auto& e : edges) {
+        buffer << e.source << " " << e.destination << " " << e.weight << "\n";
+        bufferSize++;
+        
+        if (bufferSize >= BUFFER_LIMIT) {
+            out << buffer.str();
+            buffer.str("");
+            buffer.clear();
+            bufferSize = 0;
+        }
     }
+    
+    // Flush ostatak
+    if (bufferSize > 0) {
+        out << buffer.str();
+    }
+    
     out.close();
-
-    // --- Generiši DOT fajl
-    string dotFile = filename.substr(0, filename.find_last_of('.')) + ".dot";
-    ofstream dot(dotFile);
-    if (!dot.is_open()) {
-        cerr << "Ne mogu otvoriti DOT fajl " << dotFile << " za pisanje!\n";
-        return false;
-    }
-
-    dot << "digraph G {\n";
-    dot << "    rankdir=LR;\n"; // lijevo->desno (neuron-network stil)
-    dot << "    node [shape=circle, fontsize=12];\n\n";
-
-    // Opcionalno: označi izvor i ponor
-    dot << "    0 [shape=doublecircle, color=green, label=\"source (0)\"];\n";
-    dot << "    " << (numNodes-1) << " [shape=doublecircle, color=red, label=\"sink (" << numNodes-1 << ")\"];\n\n";
-
-    // Ispisi sve čvorove
-    for (int i = 0; i < numNodes; i++)
-        dot << "    " << i << ";\n";
-
-    dot << "\n";
-
-    // Ispisi sve grane
-    for (auto& e : edges) {
-        dot << "    " << e.source << " -> " << e.destination
-            << " [label=\"" << e.weight << "\"];\n";
-    }
-
-    dot << "}\n";
-    dot.close();
-
-    cout << "[INFO] Graf kreiran: " << filename 
-         << " i DOT fajl: " << dotFile << endl;
-
+    cout << " Gotovo!" << endl;
+    
+    cout << "[INFO] Graf uspjesno kreiran: " << filename << endl;
+    cout << "       Cvorova: " << numNodes << ", Grana: " << edges.size() << endl;
+    
     return true;
 }
 

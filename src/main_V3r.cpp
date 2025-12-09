@@ -18,7 +18,7 @@ void cleanup(Graph* g, GraphSoA* gSoA) {
 
 int main() {
     string folder = "graph";
-    string txtFile = folder + "/graf.txt";
+    string txtFile = folder + "/graf_rare.txt";
 
     // --- INICIJALIZACIJA (AoS) ---
     if (!fs::exists(folder)) { fs::create_directory(folder); }
@@ -27,9 +27,7 @@ int main() {
     }
 
     Graph* g = readGraph(txtFile);
-    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; return 1; }
-    GraphSoA* gSoA = readGraphSoA(txtFile); 
-    if (!gSoA) { cerr << "[ERROR] Ne mogu ucitati graf (SoA)!" << endl; cleanup(g, nullptr); return 1; }
+    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; cleanup(g, nullptr); return 1; }
 
     cout << "[INFO] Testiram: V3 - OpenMP Paralelizacija\n";
     cout << "[INFO] Cvorovi: " << g->num_nodes << ", Grane: " << g->num_edges << endl;
@@ -51,6 +49,6 @@ int main() {
     else
         cout << "[REZULTAT] Najkraci put (0 -> " << last_node << ") = " << distances[last_node] << endl;
     
-    cleanup(g, gSoA);
+    cleanup(g, nullptr);
     return 0;
 }

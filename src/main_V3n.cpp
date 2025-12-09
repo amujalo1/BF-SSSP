@@ -20,38 +20,35 @@ int main() {
     string folder = "graph";
     string txtFile = folder + "/graf.txt";
 
-    // --- INICIJALIZACIJA (SoA) ---
+    // --- INICIJALIZACIJA (AoS) ---
     if (!fs::exists(folder)) { fs::create_directory(folder); }
     if (!fs::exists(txtFile)) { 
         createGraph(txtFile, 200000, 8000000, -15, 35); 
     }
 
-    Graph* g = readGraph(txtFile); 
-    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; return 1; }
-    GraphSoA* gSoA = readGraphSoA(txtFile);
-    if (!gSoA) { cerr << "[ERROR] Ne mogu ucitati graf (SoA)!" << endl; cleanup(g, nullptr); return 1; }
+    Graph* g = readGraph(txtFile);
+    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; cleanup(g, nullptr); return 1; }
 
-    cout << "[INFO] Testiram: V6 - SIMD Tiling (AVX-512)\n";
-    cout << "[INFO] Cvorovi: " << gSoA->num_nodes << ", Grane: " << gSoA->num_edges << endl;
+    cout << "[INFO] Testiram: V3 - OpenMP Paralelizacija\n";
+    cout << "[INFO] Cvorovi: " << g->num_nodes << ", Grane: " << g->num_edges << endl;
     cout << string(60, '=') << endl;
     
-    int last_node = gSoA->num_nodes - 1;
+    int last_node = g->num_nodes - 1;
 
-    // =======================================================
-    // ========== TEST: V6 - SIMD AVX-512 ==========
-    // =======================================================
+    // ===========================================
+    // ========== TEST: V3 - OpenMP ==========
+    // ===========================================
     auto start = chrono::high_resolution_clock::now();
-    vector<int> distances_i = runBellmanFordSSSP_SIMD_Tiling_AVX512(gSoA, 0); // <-- KLJUČNA LINIJA
+    vector<long> distances = runBellmanFordSSSP_OMP(g, 0); // <-- KLJUČNA LINIJA
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> elapsed = end - start;
     
-    long result = (long)distances_i[last_node];
     cout << "[VRIJEME] " << fixed << setprecision(3) << elapsed.count() << " sekundi\n";
-    if (result >= numeric_limits<int>::max() / 4)
+    if (distances[last_node] >= numeric_limits<long>::max() / 4)
         cout << "[REZULTAT] Cvor " << last_node << " nije dostupan.\n";
     else
-        cout << "[REZULTAT] Najkraci put (0 -> " << last_node << ") = " << result << endl;
+        cout << "[REZULTAT] Najkraci put (0 -> " << last_node << ") = " << distances[last_node] << endl;
     
-    cleanup(g, gSoA);
+    cleanup(g, nullptr);
     return 0;
 }

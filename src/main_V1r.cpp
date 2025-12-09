@@ -19,18 +19,16 @@ void cleanup(Graph* g, GraphSoA* gSoA) {
 
 int main() {
     string folder = "graph";
-    string txtFile = folder + "/graf.txt";
+    string txtFile = folder + "/graf_rare.txt";
 
     // --- INICIJALIZACIJA (AoS) ---
     if (!fs::exists(folder)) { fs::create_directory(folder); }
     if (!fs::exists(txtFile)) { 
-        createGraph(txtFile, 200000, 8000000, -15, 35); 
+        createGraph(txtFile, 200000, 800000, -15, 35); 
     }
 
     Graph* g = readGraph(txtFile);
-    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; return 1; }
-    GraphSoA* gSoA = readGraphSoA(txtFile); // Ucitaj i SoA za simetrično ciscenje
-    if (!gSoA) { cerr << "[ERROR] Ne mogu ucitati graf (SoA)!" << endl; cleanup(g, nullptr); return 1; }
+    if (!g) { cerr << "[ERROR] Ne mogu ucitati graf (AoS)!" << endl; cleanup(g, nullptr); return 1; }
 
     cout << "[INFO] Testiram: V1 - Originalna (Baseline)\n";
     cout << "[INFO] Cvorovi: " << g->num_nodes << ", Grane: " << g->num_edges << endl;
@@ -52,6 +50,6 @@ int main() {
     else
         cout << "[REZULTAT] Najkraci put (0 -> " << last_node << ") = " << distances[last_node] << endl;
     
-    cleanup(g, gSoA);
+    cleanup(g, nullptr);
     return 0;
 }

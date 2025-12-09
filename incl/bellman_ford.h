@@ -29,18 +29,12 @@ std::vector<long> runBellmanFordSSSP_OMP(Graph* graph, int source_node_id);
 
 // Verzija 4: SIMD Tiling sa AVX2 (Prva SIMD verzija)
 // Koristi SoA format (GraphSoA*) i int za distance (zbog SIMD širine registra i gather).
-std::vector<int> runBellmanFordSSSP_SIMD_Tiling(GraphSoA* graph, int source_node_id);
+std::vector<int> runBellmanFordSSSP_SIMD_OMP(GraphSoA* graph, int source_node_id);
 
 // Verzija 5: SIMD Tiling + OpenMP (AVX2)
 // Kombinuje paralelizaciju (V3) i AVX2 SIMD (V4). Koristi int za distance.
-std::vector<int> runBellmanFordSSSP_SIMD_Tiling_OMP(GraphSoA* graph, int source_node_id);
+std::vector<int> runBellmanFordSSSP_SIMD_512_OMP(GraphSoA* graph, int source_node_id);
 
-// Verzija 6: SIMD Tiling sa AVX-512 (Veći registri)
-// Koristi AVX-512 (16 int-ova) za veću SIMD paralelizaciju. Single-threaded.
-std::vector<int> runBellmanFordSSSP_SIMD_Tiling_AVX512(GraphSoA* graph, int source_node_id);
-
-// Verzija 7: SIMD TILING + AVX-512 + OpenMP (ULTIMATIVNA KOMBINACIJA)
-// Kombinuje V5 i V6: Najveća paralelizacija - AVX-512 SIMD (16-way) + OpenMP.
-std::vector<int> runBellmanFordSSSP_SIMD_Tiling_AVX512_OMP(GraphSoA* graph, int source_node_id);
+std::vector<long> runBellmanFordSSSP_CACHE_SORT(Graph* graph, int source_node_id);
 
 #endif // BELLMAN_FORD_H
